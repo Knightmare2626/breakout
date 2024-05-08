@@ -1,5 +1,5 @@
 #include "raylib.h"
-#include <stdlib.h>
+#include <stdio.h>
 
 const int FPS = 60;
 
@@ -29,6 +29,24 @@ struct GameState
 
 const int numBlocksX = 18;
 const int numBlocksY = 10;
+
+void saveScore(struct GameState *gameState)
+{
+    FILE *g_score_ptr;
+    g_score_ptr = fopen("scores.dat", "a");
+
+    if (g_score_ptr == NULL)
+    {
+        printf("File couldn't be opened successfully :(\n");
+        return;
+    }
+
+    if (gameState->score != 0)
+        fprintf(g_score_ptr, "%d\n", gameState->score);
+
+    fclose(g_score_ptr);
+    gameState->score = 0;
+}
 
 bool IsAnyKeyPressed()
 {
@@ -64,12 +82,16 @@ void checkBallPlayareaCollision(struct Ball *ball, struct Paddle *paddle, struct
         ball->velocity.x = 0;
         ball->Centre.y = screenHeight - ball->Radius;
     }
+
     else if (ball->Centre.x + ball->Radius > playArea.width + 50)
         ball->velocity.x *= -1;
+
     else if (ball->Centre.x + ball->Radius < playArea.x + 20)
         ball->velocity.x *= -1;
+
     else if (ball->Centre.y + ball->Radius < playArea.y + 20)
-        ball->velocity.y;
+        ball->velocity.y *= -1;
+
     if (CheckCollisionCircleRec(ball->Centre, ball->Radius, paddle->Rect))
     {
         ball->velocity.y *= -1;
@@ -149,12 +171,15 @@ int main(void)
         updateBallPosition(&ball, &gameState);
 
         /* CONDITIONS */
-        if (gameState.isGameOver && IsAnyKeyPressed())
+        if (gameState.isGameOver)
         {
-            ResetBallPosition(&ball);
-            gameState.isGameOver = false;
-            setBallVelocity(&ball);
-            gameState.score = 0;
+            saveScore(&gameState);
+            if (IsAnyKeyPressed())
+            {
+                ResetBallPosition(&ball);
+                gameState.isGameOver = false;
+                setBallVelocity(&ball);
+            }
         }
 
         checkBallPlayareaCollision(&ball, &paddle, &gameState, playArea);
@@ -199,10 +224,10 @@ int main(void)
             DrawText("YOU LOST! ", screenWidth / 2 - 300, paddle.Rect.y, 100, RED);
             DrawText("Press any key to restart! ", screenWidth / 2 - 330, screenHeight / 2 + 100, 50, WHITE);
         }
+        else
+            gameState.score++;
 
         EndDrawing();
-
-        gameState.score++;
     }
 
     CloseWindow(); // Close window and OpenGL context
