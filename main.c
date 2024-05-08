@@ -23,28 +23,12 @@ struct Paddle
 struct GameState
 {
     bool isGameOver;
-    bool isPaused;
     int score;
     int timer;
 };
 
 const int numBlocksX = 18;
 const int numBlocksY = 10;
-
-void screenTimer(struct GameState *gameState)
-{
-    if (gameState->timer > FPS * 4)
-        DrawText("4", screenWidth / 2, screenHeight / 2, 100, ORANGE);
-    else if (gameState->timer > FPS * 3)
-        DrawText("3", screenWidth / 2, screenHeight / 2, 100, ORANGE);
-    else if (gameState->timer > FPS * 2)
-        DrawText("2", screenWidth / 2, screenHeight / 2, 100, ORANGE);
-    else if (gameState->timer > FPS)
-        DrawText("1", screenWidth / 2, screenHeight / 2, 100, ORANGE);
-    else
-        gameState->isPaused = true; // Set isPaused to true when the timer reaches zero
-    gameState->timer--; // Decrement timer
-}
 
 bool IsAnyKeyPressed()
 {
@@ -73,29 +57,19 @@ void ResetBallPosition(struct Ball *ball)
 void checkBallPlayareaCollision(struct Ball *ball, struct Paddle *paddle, struct GameState *gameState, Rectangle playArea)
 {
     // stops the ball from going off screen
-    if (ball->Radius + ball->Centre.y > screenHeight && !gameState->isPaused)
+    if (ball->Radius + ball->Centre.y > screenHeight)
     {
         (gameState->isGameOver) = true;
         ball->velocity.y = 0;
         ball->velocity.x = 0;
         ball->Centre.y = screenHeight - ball->Radius;
     }
-    else if (ball->Centre.x + ball->Radius > playArea.width + 50 && !gameState->isPaused)
-    {
+    else if (ball->Centre.x + ball->Radius > playArea.width + 50)
         ball->velocity.x *= -1;
-        // Ball.Centre.x = playArea.width - Ball.Radius;
-    }
-    else if (ball->Centre.x + ball->Radius < playArea.x + 20 && !gameState->isPaused)
-    {
+    else if (ball->Centre.x + ball->Radius < playArea.x + 20)
         ball->velocity.x *= -1;
-        // Ball.Centre.x = Ball.Radius + playArea.x;
-    }
-    else if (ball->Centre.y + ball->Radius < playArea.y + 20 && !gameState->isPaused)
-    {
-        ball->velocity.y *= -1;
-        // Ball.Centre.y = Ball.Radius + playArea.y;
-    }
-
+    else if (ball->Centre.y + ball->Radius < playArea.y + 20)
+        ball->velocity.y;
     if (CheckCollisionCircleRec(ball->Centre, ball->Radius, paddle->Rect))
     {
         ball->velocity.y *= -1;
@@ -105,17 +79,14 @@ void checkBallPlayareaCollision(struct Ball *ball, struct Paddle *paddle, struct
 
 void updateBallPosition(struct Ball *ball, struct GameState *gameState)
 {
-    if (!gameState->isPaused)
-    {
-        ball->Centre.y += ball->velocity.y;
-        ball->Centre.x += ball->velocity.x;
-    }
+    ball->Centre.y += ball->velocity.y;
+    ball->Centre.x += ball->velocity.x;
 }
 
 void updatePaddle(struct Paddle *paddle, Rectangle playArea, struct GameState *gameState)
 {
     // moves the paddle
-    if (!gameState->isPaused && !gameState->isGameOver)
+    if (!gameState->isGameOver)
     {
         if (IsKeyDown(KEY_LEFT) && (paddle->Rect.x > playArea.x))
             paddle->Rect.x -= 10;
@@ -166,7 +137,6 @@ int main(void)
 
     struct GameState gameState;
     gameState.isGameOver = false;
-    gameState.isPaused = false;
     gameState.score = 0;
     gameState.timer = FPS * 5;
 
@@ -179,17 +149,12 @@ int main(void)
         updateBallPosition(&ball, &gameState);
 
         /* CONDITIONS */
-        if (gameState.isGameOver)
+        if (gameState.isGameOver && IsAnyKeyPressed())
         {
+            ResetBallPosition(&ball);
+            gameState.isGameOver = false;
+            setBallVelocity(&ball);
             gameState.score = 0;
-            if (IsAnyKeyPressed())
-            {
-                gameState.isGameOver = false;
-                ResetBallPosition(&ball);
-                setBallVelocity(&ball);
-                gameState.isPaused = true;
-                screenTimer(&gameState);
-            }
         }
 
         checkBallPlayareaCollision(&ball, &paddle, &gameState, playArea);
@@ -205,8 +170,15 @@ int main(void)
         DrawRectangleLinesEx(playArea, 5, DARKBROWN);
         DrawCircle(ball.Centre.x, ball.Centre.y, ball.Radius, ball.Color);
         DrawRectangleRec(paddle.Rect, paddle.Color);
-        DrawText(TextFormat("Score : %d", gameState.score), screenWidth / 2, 10, 20, BLACK);
 
+        // displays and centres "Score"
+        char *ScoreText = TextFormat("Score: %d", gameState.score);
+        Vector2 textSize = MeasureTextEx(GetFontDefault(), ScoreText, 30, 1);
+        int posX = (screenWidth - textSize.x) / 2;
+        int posY = 20;
+        DrawText(ScoreText, posX, posY, 30, BLACK);
+
+        // draws and updates the rectangles
         for (int i = 0; i < numBlocksX; i++)
         {
             for (int j = 0; j < numBlocksY; j++)
