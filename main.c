@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include <stdlib.h>
 #include <stdio.h>
 
 const int FPS = 60;
@@ -197,7 +198,7 @@ int main(void)
         DrawRectangleRec(paddle.Rect, paddle.Color);
 
         // displays and centres "Score"
-        char *ScoreText = TextFormat("Score: %d", gameState.score);
+        const char *ScoreText = TextFormat("Score: %d", gameState.score);
         Vector2 textSize = MeasureTextEx(GetFontDefault(), ScoreText, 30, 1);
         int posX = (screenWidth - textSize.x) / 2;
         int posY = 20;
