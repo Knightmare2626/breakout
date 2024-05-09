@@ -73,6 +73,18 @@ void ResetBallPosition(struct Ball *ball)
     ball->Centre.y = screenHeight / 2 + 150;
 }
 
+void resetBlocks(bool blocksHit[numBlocksX][numBlocksY])
+{
+    for (int i = 0; i < numBlocksX; i++)
+    {
+        for (int j = 0; j < numBlocksY; j++)
+        {
+            blocksHit[i][j] = false;
+        }
+    }
+}
+
+
 void checkBallPlayareaCollision(struct Ball *ball, struct Paddle *paddle, struct GameState *gameState, Rectangle playArea)
 {
     // stops the ball from going off screen
@@ -165,6 +177,8 @@ int main(void)
 
     SetTargetFPS(FPS);
 
+    resetBlocks(blocksHit);
+
     // Main game loop
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
@@ -178,6 +192,7 @@ int main(void)
             if (IsAnyKeyPressed())
             {
                 ResetBallPosition(&ball);
+                resetBlocks(blocksHit);
                 gameState.isGameOver = false;
                 setBallVelocity(&ball);
             }
@@ -226,7 +241,7 @@ int main(void)
             DrawText("Press any key to restart! ", screenWidth / 2 - 330, screenHeight / 2 + 100, 50, WHITE);
         }
         else
-            gameState.score++;
+            gameState.score += abs(ball.velocity.y/2);
 
         EndDrawing();
     }
