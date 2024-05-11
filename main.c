@@ -73,6 +73,12 @@ void ResetBallPosition(struct Ball *ball)
     ball->Centre.y = screenHeight / 2 + 150;
 }
 
+void ResetPaddlePosition(struct Paddle *paddle, struct Ball *ball)
+{
+    paddle->Rect.x = ball->Centre.x - 20;
+    paddle->Rect.y = 570;
+}
+
 void resetBlocks(bool blocksHit[numBlocksX][numBlocksY])
 {
     for (int i = 0; i < numBlocksX; i++)
@@ -83,7 +89,6 @@ void resetBlocks(bool blocksHit[numBlocksX][numBlocksY])
         }
     }
 }
-
 
 void checkBallPlayareaCollision(struct Ball *ball, struct Paddle *paddle, struct GameState *gameState, Rectangle playArea)
 {
@@ -192,6 +197,7 @@ int main(void)
             if (IsAnyKeyPressed())
             {
                 ResetBallPosition(&ball);
+                ResetPaddlePosition(&paddle, &ball);
                 resetBlocks(blocksHit);
                 gameState.isGameOver = false;
                 setBallVelocity(&ball);
@@ -241,7 +247,7 @@ int main(void)
             DrawText("Press any key to restart! ", screenWidth / 2 - 330, screenHeight / 2 + 100, 50, WHITE);
         }
         else
-            gameState.score += abs(ball.velocity.y/2);
+            gameState.score += abs(ball.velocity.y / 2);
 
         EndDrawing();
     }
