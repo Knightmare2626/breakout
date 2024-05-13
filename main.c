@@ -7,6 +7,11 @@ const int FPS = 60;
 const int screenWidth = 1280;
 const int screenHeight = 720;
 
+Rectangle playArea = {50, 50, screenWidth - 100, screenHeight + 20};
+Rectangle leaderBoardButton = {10, 5, 140, 40};
+
+const int numberOfScores = 5;
+
 struct Ball
 {
     Vector2 Centre;
@@ -25,7 +30,6 @@ struct GameState
 {
     bool isGameOver;
     int score;
-    int timer;
 };
 
 const int numBlocksX = 18;
@@ -47,6 +51,28 @@ void saveScore(struct GameState *gameState)
 
     fclose(g_score_ptr);
     gameState->score = 0;
+}
+
+void leaderBoardFunction(FILE *fptr, int scores[], int numberOfScores)
+{
+    int i = 0;
+    while ((i < numberOfScores) && fscanf(fptr, "%d", &scores[i]) != EOF)
+    {
+        i++;
+    }
+
+    for (int i = 0; i < numberOfScores; i++)
+    {
+        for (int j = 0; j < numberOfScores - i - 1; j++)
+        {
+            if (scores[j + 1] > scores[j])
+            {
+                int temp = scores[j];
+                scores[j] = scores[j + 1];
+                scores[j + 1] = temp;
+            }
+        }
+    }
 }
 
 bool IsAnyKeyPressed()
@@ -71,12 +97,6 @@ void ResetBallPosition(struct Ball *ball)
 {
     ball->Centre.x = screenWidth / 2;
     ball->Centre.y = screenHeight / 2 + 150;
-}
-
-void ResetPaddlePosition(struct Paddle *paddle, struct Ball *ball)
-{
-    paddle->Rect.x = ball->Centre.x - 20;
-    paddle->Rect.y = 570;
 }
 
 void resetBlocks(bool blocksHit[numBlocksX][numBlocksY])
@@ -157,8 +177,6 @@ int main(void)
 {
     InitWindow(screenWidth, screenHeight, "Breakout");
 
-    Rectangle playArea = {50, 50, screenWidth - 100, screenHeight + 20};
-
     bool blocksHit[numBlocksX][numBlocksY];
 
     struct Ball ball;
@@ -178,15 +196,15 @@ int main(void)
     struct GameState gameState;
     gameState.isGameOver = false;
     gameState.score = 0;
-    gameState.timer = FPS * 5;
-
-    SetTargetFPS(FPS);
 
     resetBlocks(blocksHit);
+
+    SetTargetFPS(FPS);
 
     // Main game loop
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
+        Vector2 mousePos = GetMousePosition();
         // UPDATES
         updateBallPosition(&ball, &gameState);
 
@@ -197,7 +215,6 @@ int main(void)
             if (IsAnyKeyPressed())
             {
                 ResetBallPosition(&ball);
-                ResetPaddlePosition(&paddle, &ball);
                 resetBlocks(blocksHit);
                 gameState.isGameOver = false;
                 setBallVelocity(&ball);
@@ -208,15 +225,42 @@ int main(void)
         updatePaddle(&paddle, playArea, &gameState);
         updateAndRegisterBallBlockCollision(&ball, blocksHit, &gameState);
 
+        FILE *score_ptr = fopen("scores.dat", "r");
+        int scores[numberOfScores];
+
+        for (int i = 0; i < numberOfScores; i++)
+        {
+            scores[i] = 0;
+        }
+
+        leaderBoardFunction(score_ptr, scores, numberOfScores);
+
         // DRAWINGS
         BeginDrawing();
 
         if (!gameState.isGameOver)
             ClearBackground(RAYWHITE);
 
-        DrawRectangleLinesEx(playArea, 5, DARKBROWN);
+        DrawRectangleLinesEx(playArea, 5, gameState.isGameOver ? LIGHTGRAY : DARKBROWN);
         DrawCircle(ball.Centre.x, ball.Centre.y, ball.Radius, ball.Color);
         DrawRectangleRec(paddle.Rect, paddle.Color);
+
+        bool leaderBoardPressed = (mousePos.x > leaderBoardButton.x) && (mousePos.y > leaderBoardButton.y) && (mousePos.x < leaderBoardButton.width) && (mousePos.y < leaderBoardButton.height) &&
+                                  IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+
+        DrawRectangleRec(leaderBoardButton, (leaderBoardPressed) ? WHITE : GRAY);
+        DrawText("Leaderboard", 15, 15, 20, BLACK);
+
+        if (leaderBoardPressed)
+        {
+            DrawText("Scores: ", 10, 50, 20, BLACK);
+            for (int i = 0; i < numberOfScores; i++)
+            {
+                char scoreStr[16];
+                sprintf(scoreStr, "%d", scores[i]);
+                DrawText(scoreStr, 10, i * 30 + 75, 20, DARKGREEN);
+            }
+        }
 
         // displays and centres "Score"
         const char *ScoreText = TextFormat("Score: %d", gameState.score);
@@ -245,11 +289,13 @@ int main(void)
             ClearBackground(LIGHTGRAY);
             DrawText("YOU LOST! ", screenWidth / 2 - 300, paddle.Rect.y, 100, RED);
             DrawText("Press any key to restart! ", screenWidth / 2 - 330, screenHeight / 2 + 100, 50, WHITE);
+            DrawText("Press ESC to exit game\n", screenWidth / 2 - 300, screenHeight / 2 + 150, 50, WHITE);
         }
         else
             gameState.score += abs(ball.velocity.y / 2);
 
         EndDrawing();
+        fclose(score_ptr);
     }
 
     CloseWindow(); // Close window and OpenGL context
